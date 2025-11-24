@@ -4,10 +4,18 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import edu.univ.erp.data.ConnectionFactory;
+import edu.univ.erp.data.ERPDaoJdbcImpl;
+import edu.univ.erp.service.AuthServiceJdbcImpl;
+import edu.univ.erp.auth.JBCryptPasswordHasher;
+import edu.univ.erp.domain.UserAuth;
+import edu.univ.erp.ui.admin.AdminDashboardWindow;
+import edu.univ.erp.ui.instructor.InstructorDashboardWindow;
+import edu.univ.erp.ui.student.StudentDashboardWindow;
 
 /**
- * Simple LoginFrame patched: trims inputs, prints debug to stdout, and performs demo login checks.
- * This is a safe UI-only patch to unblock login for testing. It does not modify DB.
+ * LoginFrame with real database authentication.
+ * Uses AuthService to verify credentials against the database.
  */
 public class LoginFrame extends JFrame {
     private JTextField userField;
@@ -54,44 +62,38 @@ public class LoginFrame extends JFrame {
         loginButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                System.out.println("DEBUG: Login button clicked");
-                String u = userField.getText();
-                String p = new String(passField.getPassword());
-                if (u != null) u = u.trim();
-                if (p != null) p = p.trim();
-                System.out.println("DEBUG: username=[" + u + "], passwordLength=" + (p==null?0:p.length()));
-
-                // Demo credentials (matches seeded demo users)
-                if ("admin1".equals(u) && "adminpass".equals(p)) {
-                    SwingUtilities.invokeLater(() -> {
-                        AdminDashboardWindow w = new AdminDashboardWindow();
-                        dispose();
-                        w.setVisible(true);
-                    });
-                } else if ("inst1".equals(u) && "adminpass".equals(p)) {
-                    SwingUtilities.invokeLater(() -> {
-                        InstructorDashboardWindow w = new InstructorDashboardWindow(2L);
-                        dispose();
-                        w.setVisible(true);
-                    });
-                } else if ("stu1".equals(u) && "adminpass".equals(p)) {
-                    SwingUtilities.invokeLater(() -> {
-                        StudentDashboardWindow w = new StudentDashboardWindow(3L);
-                        dispose();
-                        w.setVisible(true);
-                    });
-                } else if ("stu2".equals(u) && "adminpass".equals(p)) {
-                    SwingUtilities.invokeLater(() -> {
-                        StudentDashboardWindow w = new StudentDashboardWindow(4L);
-                        dispose();
-                        w.setVisible(true);
-                    });
-                } else {
-                    // Show friendly message
-                    JOptionPane.showMessageDialog(LoginFrame.this, "Incorrect username or password.", "Login failed", JOptionPane.ERROR_MESSAGE);
-                }
+                onLogin();
             }
         });
+    }
+
+    private void onLogin() {
+        String u = userField.getText().trim();
+        String p = new String(passField.getPassword());
+        try {
+            // 1. Initialize dependencies (In a real app, do this once in Main)
+            ConnectionFactory.initFromFile("src/main/resources/application.properties"); 
+            ERPDaoJdbcImpl dao = new ERPDaoJdbcImpl(ConnectionFactory.authDataSource(), ConnectionFactory.erpDataSource());
+            AuthServiceJdbcImpl auth = new AuthServiceJdbcImpl(dao, new JBCryptPasswordHasher());
+            // 2. Attempt Login
+            UserAuth user = auth.login(u, p);
+            
+            // 3. Route based on Role
+            dispose(); // Close login
+            String role = user.getRole().toLowerCase();
+            
+            if (role.equals("admin")) {
+                new AdminDashboardWindow().setVisible(true);
+            } else if (role.equals("instructor")) {
+                // We pass the user ID so the dashboard knows WHO is logged in
+                new InstructorDashboardWindow(user.getUserId()).setVisible(true);
+            } else if (role.equals("student")) {
+                new StudentDashboardWindow(user.getUserId()).setVisible(true);
+            }
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Login Failed: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace(); // For debugging
+        }
     }
 
     public void showUI(){ SwingUtilities.invokeLater(() -> setVisible(true)); }
