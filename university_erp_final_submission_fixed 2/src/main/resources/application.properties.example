@@ -1,0 +1,12 @@
+# Auth DB
+auth.jdbc.url=jdbc:mysql://localhost:3306/auth_db
+auth.jdbc.username=root
+auth.jdbc.password=your_password
+
+# ERP DB
+erp.jdbc.url=jdbc:mysql://localhost:3306/erp_db
+erp.jdbc.username=root
+erp.jdbc.password=your_password
+
+# Hikari
+db.pool.maximumPoolSize=10

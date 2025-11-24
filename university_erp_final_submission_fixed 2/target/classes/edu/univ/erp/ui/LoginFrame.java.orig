@@ -1,0 +1,49 @@
+package edu.univ.erp.ui;
+
+import javax.swing.*;
+import java.awt.*;
+
+public class LoginFrame extends JFrame {
+    private JTextField userField;
+    private JPasswordField passField;
+
+    public LoginFrame() {
+        super("ERP Login");
+        initComponents();
+    }
+
+    private void initComponents() {
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setSize(420,260); setLocationRelativeTo(null);
+        JPanel p = new JPanel();
+        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
+        p.setBorder(BorderFactory.createEmptyBorder(8,8,8,8));
+        p.add(new JLabel("Username"));
+        userField = new JTextField(20); p.add(userField);
+        p.add(Box.createVerticalStrut(8));
+        p.add(new JLabel("Password")); passField = new JPasswordField(20); p.add(passField);
+        p.add(Box.createVerticalStrut(12));
+        JButton loginBtn = new JButton("Login");
+        loginBtn.addActionListener(ev -> onLogin());
+        p.add(loginBtn);
+        add(p);
+    }
+
+    private void onLogin() {
+        String u = userField.getText().trim();
+        String p = new String(passField.getPassword());
+        // This placeholder mimics successful login flow.
+        if("admin1".equals(u)) {
+            AdminDashboardWindow w = new AdminDashboardWindow();
+            dispose(); w.setVisible(true);
+        } else if("inst1".equals(u)) {
+            InstructorDashboardWindow w = new InstructorDashboardWindow(2L);
+            dispose(); w.setVisible(true);
+        } else {
+            StudentDashboardWindow w = new StudentDashboardWindow(3L);
+            dispose(); w.setVisible(true);
+        }
+    }
+
+    public void showUI(){ SwingUtilities.invokeLater(() -> setVisible(true)); }
+}
